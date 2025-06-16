@@ -14,9 +14,9 @@ package totp;
 use strict;
 
 use Plugins;
-use Log qw(message error);
+use Globals;
 use Utils;
-use Config;
+use Log qw(message error);
 use Authen::OATH;
 use Network::Send;
 
@@ -27,23 +27,16 @@ Plugins::register(
 );
 
 # Hook to intercept TOTP request (opcode 0x0AE3)
+# You need to add the following packet to packet_list
+# '0AE3' => ['received_login_token', 'v l Z20 Z*', [qw(len login_type flag login_token)]],
 my $hooks = Plugins::addHooks(
-    ['packet/0x0AE3', \&onAskOtp]
+    ['packet/received_login_token', \&onReceivedLoginToken]
 );
 
-sub onAskOtp {
-    my ($hook, $args) = @_;
-    # Get the payload without the 4-byte header
-    my $msg = $args->{msg};
+sub onReceivedLoginToken {
+    message "[totp] Detected TOTP request packet (0x0AE3)\n";
 
-    # Checks if it is indeed a TOTP request (typical size of 28 bytes)
-    if (length($msg) != 28) {
-        return;
-    }
-
-    # Get TOTP secret key from config.txt (Base32)
-    my $secret = Config::get('totpSecret');
-    unless ($secret) {
+    unless ($config{'totpSecret'}) {
         error "[totp] Error: 'totpSecret' not configured in config.txt\n";
         return;
     }
@@ -51,7 +44,7 @@ sub onAskOtp {
     # Generates the TOTP code 
     # (Initially using Authen OATH, but in the future it may be a custom implementation)
     my $oath = Authen::OATH->new();
-    my $totp = $oath->totp($secret);
+    my $totp = $oath->totp($config{'totpSecret'});
     unless (defined $totp) {
         error "[totp] Failed to generate TOTP\n";
         return;
