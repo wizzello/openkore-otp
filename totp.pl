@@ -48,24 +48,24 @@ sub onAskOtp {
         return;
     }
 
-    # Gera o código TOTP
+    # Generates the TOTP code 
+    # (Initially using Authen OATH, but in the future it may be a custom implementation)
     my $oath = Authen::OATH->new();
     my $totp = $oath->totp($secret);
     unless (defined $totp) {
-        error "[totp] Falha ao gerar TOTP\n";
+        error "[totp] Failed to generate TOTP\n";
         return;
     }
 
     message "[totp] Sending TOTP: $totp\n";
 
-    # Monta o pacote de envio do TOTP (opcode 0x0C23)
-    # 0x23, 0x0C + ASCII do código + null terminator
+    # Assembles the TOTP sending packet (opcode 0x0C23) 
+    # 0x23, 0x0C + ASCII code + null terminator
+    # And send to the server
     my $packet = pack('C2', 0x23, 0x0C) . $totp . "\x00";
-
-    # Envia ao servidor
     Network::Send::sendToServer($packet);
 
-    # Cancelamos o processamento padrão do pacote para evitar duplicação
+    # Overrides default packet processing to avoid duplication
     return 0;
 }
 
