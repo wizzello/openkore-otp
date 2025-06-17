@@ -1,8 +1,8 @@
-# tOTP Plugin for OpenKore
+# OTP Plugin for OpenKore
 
 ## ✪ Overview
 
-tOTP is a plugin for **OpenKore** that automatically handles Time-based One-Time Password (TOTP) authentication during login.
+OTP is a plugin for **OpenKore** that automatically handles Time-based One-Time Password (TOTP) authentication during login.
 It listens for OTP requests and generates the correct TOTP code using the seed provided in your `config.txt`.
 
 ✅ Compatible with servers that require OTP during login.
@@ -23,10 +23,17 @@ It listens for OTP requests and generates the correct TOTP code using the seed p
 
 1️⃣ **Place the plugin**
 
-Download `tOTP.pl` and put it in your OpenKore `plugins/` directory:
+Download `otp.pl` and put it in your OpenKore `plugins/` directory:
 
 ```
-/openkore/plugins/tOTP/tOTP.pl
+/openkore/plugins/OTP/otp.pl
+```
+
+Download `Core.pm` and `Utils.pm` and put it in your OpenKore `plugins/OTP` directory:
+
+```
+/openkore/plugins/OTP/OTP/Core.pm
+/openkore/plugins/OTP/OTP/Utils.pm
 ```
 
 2️⃣ **Configure your OTP seed**
@@ -109,7 +116,7 @@ otpSeed T0TPS33DROL4S3RV
 ## 🔑 How it works
 
 * Server sends a `0AE3` packet requesting an OTP code.
-* Modified `Receive.pm` triggers: `Plugins::callHook('totp/request_otp', $messageSender);`
+* Modified `Receive.pm` triggers: `Plugins::callHook('login_token_requested', $messageSender);`
 * The plugin generates a valid TOTP code and sends it to the server.
 * Login continues automatically.
 
