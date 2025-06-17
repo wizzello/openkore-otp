@@ -17,7 +17,8 @@ use Plugins;
 use Globals;
 use Utils;
 use Log qw(message error);
-use Authen::OATH;
+use Digest::SHA qw(hmac_sha1);
+
 use Network::Send;
 
 Plugins::register(
@@ -36,6 +37,53 @@ my $login_type = 0;
 my $hooks = Plugins::addHooks(
     ['packet/received_login_token', \&onReceivedLoginToken]
 );
+
+# Generate OTP using SHA1
+sub decode_base32 {
+    my ($b32) = @_;
+    $b32 = uc($b32);
+    $b32 =~ tr/A-Z2-7//cd;
+
+    my %b32map = (
+        A => 0, B => 1, C => 2, D => 3, E => 4, F => 5, G => 6, H => 7,
+        I => 8, J => 9, K => 10, L => 11, M => 12, N => 13, O => 14, P => 15,
+        Q => 16, R => 17, S => 18, T => 19, U => 20, V => 21, W => 22, X => 23,
+        Y => 24, Z => 25, 2 => 26, 3 => 27, 4 => 28, 5 => 29, 6 => 30, 7 => 31
+    );
+
+    my $bits = '';
+    foreach my $char (split //, $b32) {
+        $bits .= sprintf('%05b', $b32map{$char});
+    }
+
+    my $bytes = '';
+    while (length($bits) >= 8) {
+        my $byte = substr($bits, 0, 8);
+        $bytes .= chr(oct("0b$byte"));
+        $bits = substr($bits, 8);
+    }
+
+    return $bytes;
+}
+
+sub generate_totp {
+    my($secret, $time_step, $digits) = @_;
+    $time_step ||= 30;
+    $digits ||= 6;
+
+    my $decoded_key = decode_base32($secret);
+    my $tstamp = int(time() / $time_step);
+    my $tbytes = pack('J>', $tstamp);
+
+    my $hmac = hmac_sha1($tbytes, $decoded_key);
+
+    my $offset = hex(unpack('H2', substr($hmac, -1))) & 0x0F;
+    my $bin = unpack('N', substr($hmac, $offset, 4)) & 0x7FFFFFFF;
+
+    my $otp = $bin % (10 ** $digits);
+    
+    return $otp;
+}
 
 sub onReceivedLoginToken {
     my (undef, $args) = @_;
@@ -61,8 +109,7 @@ sub onReceivedLoginToken {
 
         # Generates the TOTP code 
         # (Initially using Authen OATH, but in the future it may be a custom implementation)
-        my $oath = Authen::OATH->new();
-        my $totp = $oath->totp($config{'totpSecret'});
+        my $totp = generate_totp($config{'totpSecret'});
         unless (defined $totp) {
             error "[totp] Failed to generate TOTP\n";
             return;
