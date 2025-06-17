@@ -2,25 +2,25 @@ package OTP::Core;
 
 use strict;
 
+use MIME::Base32 qw(decode_base32);
 use Digest::SHA qw(hmac_sha1);
-use OTP::Utils;
 
 sub generate_otp {
-    my ($secret, $time_step, $digits) = @_;
-    $time_step ||= 30;
-    $digits ||= 6;
+    my ($seed) = @_;
 
-    my $decoded_key = OTP::Utils::decode_base32($secret);
-    my $tstamp = int(time() / $time_step);
-    my $tbytes = pack('J>', $tstamp);
+    # contador big‑endian 64 bits
+    my $counter = pack("Q>", int(time / 30));
 
-    my $hmac = hmac_sha1($tbytes, $decoded_key);
+    # decodifica Base32 com o módulo oficial
+    my $key = decode_base32(uc $seed);
 
-    my $offset = hex(unpack('H2', substr($hmac, -1))) & 0x0F;
-    my $bin = unpack('N', substr($hmac, $offset, 4)) & 0x7FFFFFFF;
+    # HMAC‑SHA1 e truncação dinâmica
+    my $hmac = hmac_sha1($counter, $key);
+    my $off  = ord(substr($hmac, -1)) & 0x0F;
+    my $bin  = unpack("N", substr($hmac, $off, 4)) & 0x7FFFFFFF;
+    my $otp  = $bin % (10 ** 6);
 
-    my $otp = $bin % (10 ** $digits);
-    return sprintf('%06d', $otp);
+    return sprintf "%0*d", 6, $otp;
 }
 
 1;
