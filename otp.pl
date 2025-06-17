@@ -15,7 +15,6 @@ use strict;
 use OTP::Core qw(generate_otp);
 
 # Load necessary OpenKore modules
-use Plugins;
 use Globals;
 use Digest::SHA qw(hmac_sha1);
 use Log qw(message error);
@@ -36,14 +35,7 @@ my $hooks = Plugins::addHooks(
 # This function is called when OpenKore requests an OTP code.
 # It generates the TOTP code and sends it to the server.
 sub on_request_otp {
-    my (undef, $data) = @_;
-    my $sender = $data->{sender};
-    my $args = $data->{args};
-
-    if ($args->{flag} == 9101) {
-        error "[OTP] ERROR: Fail to recognize OTP (500)\n";
-        return;
-    }
+    my (undef, $messageSender) = @_;
 
     if (!$config{otpSeed}) {
         error "[OTP] ERROR: otpSeed is not set in config.txt\n";
