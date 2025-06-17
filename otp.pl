@@ -38,7 +38,14 @@ my $hooks = Plugins::addHooks(
 # This function is called when OpenKore requests an OTP code.
 # It generates the TOTP code and sends it to the server.
 sub on_request_otp {
-    my (undef, $messageSender) = @_;
+    my (undef, $data) = @_;
+    my $sender = $data->{sender};
+    my $args = $data->{args};
+
+    if($args->{flag} == '9101') {
+		error ("[OTP] ERROR: Fail to recognizing OTP (500)\n");
+		return;
+	}
 
     if (!$config{otpSeed}) {
         error "[OTP] ERROR: otpSeed is not set in config.txt\n";
@@ -50,7 +57,7 @@ sub on_request_otp {
 
     my $packet = pack('v a6 C', 0x0C23, $totp, 0x00);
 
-    $messageSender->sendToServer($packet);
+    $sender->sendToServer($packet);
     message "[OTP] TOTP sent successfully\n";
 }
 

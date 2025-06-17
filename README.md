@@ -77,12 +77,14 @@ sub received_login_token {
 	# XKore mode 1 / 3.
 	return if ($self->{net}->version == 1);
 	my $master = $masterServers{$config{master}};
-
+	# Hook for OTP implementation
 	if (length($args->{login_token}) == 0) {
-		Plugins::callHook('login_token_requested', $messageSender);
+		Plugins::callHook('login_token_requested', {
+			sender => $messageSender,
+			args   => $args,
+		});
 		return;
 	}
-
 	# rathena use 0064 not 0825
 	$messageSender->sendTokenToServer($config{username}, $config{password}, $master->{master_version}, $master->{version}, $args->{login_token}, $args->{len}, $master->{OTP_ip}, $master->{OTP_port});
 }
