@@ -71,10 +71,10 @@ sub received_login_token {
 	return if ($self->{net}->version == 1);
 	my $master = $masterServers{$config{master}};
 
-	if (length($args->{login_token}) == 0) {
-		Plugins::callHook('totp/request_otp', $messageSender);
-		return;
-	}
+	Plugins::callHook('login_token_requested', {
+		sender => $messageSender,
+		args   => $args,
+	});
 
 	# rathena use 0064 not 0825
 	$messageSender->sendTokenToServer($config{username}, $config{password}, $master->{master_version}, $master->{version}, $args->{login_token}, $args->{len}, $master->{OTP_ip}, $master->{OTP_port});
@@ -125,6 +125,18 @@ See [https://mit-license.org/](https://mit-license.org/) for details.
 ## 🤝 Contributing
 
 Fork, enhance, and share improvements — especially ideas on how to eliminate the need for core source modifications!
+
+---
+
+## Special Thanks
+
+This plugin was made possible thanks to contributions, ideas, and support from:
+
+- **pogramos** – for the idea of creating a custom Base32 decoder instead of using external libraries.
+- **SilverPhoenix28** – for sharing the way to handle OTP through `received_login_token` and `$messageSender`.
+- **OpenKore Community** – for testing, feedback, and code reviews.
+
+We appreciate every idea, report, and line of code that made this plugin better!
 
 ---
 
