@@ -87,7 +87,7 @@ sub generate_totp {
     $time_step ||= 30;
     $digits ||= 6;
 
-    my $decoded_key = decodeBase32($secret);
+    my $decoded_key = decode_base32($secret);
     my $tstamp = int(time() / $time_step);
     my $tbytes = pack('J>', $tstamp);
 
