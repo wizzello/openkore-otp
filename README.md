@@ -77,27 +77,22 @@ sub received_login_token {
 	# XKore mode 1 / 3.
 	return if ($self->{net}->version == 1);
 	my $master = $masterServers{$config{master}};
-	# Hook for OTP implementation
-	if (length($args->{login_token}) == 0) {
-		Plugins::callHook('login_token_requested', {
-			sender => $messageSender,
-			args   => $args,
-		});
-		return;
-	}
+	return 0 if (length($args->{login_token}) == 0);
 	# rathena use 0064 not 0825
 	$messageSender->sendTokenToServer($config{username}, $config{password}, $master->{master_version}, $master->{version}, $args->{login_token}, $args->{len}, $master->{OTP_ip}, $master->{OTP_port});
 }
 ```
 
-This change allows your plugin to handle and send the TOTP code.
+This change allows your plugin to handle and send the OTP.
 
 ---
 
 ## ⚠ Why is Receive.pm modification required?
 
-OpenKore core does **not** provide a native event or plugin hook when the server requests an OTP (via packet `0AE3`).
-Without modifying `Receive.pm`, the plugin has no way to know when the server is expecting the OTP code.
+OpenKore does not provide a built-in trigger for OTP (One-Time Password) requests when the server sends the relevant packet (e.g., `0AE3`). Although our plugin no longer needs to introduce a completely new hook, a small modification in `Receive.pm` is still necessary. This adjustment ensures that OpenKore properly calls an existing hook or passes the OTP request in a way that the plugin can detect and respond to it.
+
+➡ Without this modification, the plugin would not receive notification when the server expects the OTP code, and the automated login flow would not complete successfully.
+➡ The modification is minimal and only ensures the correct event is fired — no new hooks or extensive changes to OpenKore core are needed.
 
 ---
 
