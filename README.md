@@ -1,77 +1,134 @@
-## TOTP Plugin for OpenKore
+# tOTP Plugin for OpenKore
 
-This plugin adds **TOTP/OTP** support to the OpenKore login process using the **Authen::OATH** Perl module, allowing you to log into Ragnarok Online servers that require two-factor authentication (2FA) with minimal setup.
+## ✪ Overview
 
----
+tOTP is a plugin for **OpenKore** that automatically handles Time-based One-Time Password (TOTP) authentication during login.
+It listens for OTP requests and generates the correct TOTP code using the seed provided in your `config.txt`.
 
-### 📋 Prerequisites
-
-* **OpenKore** installed and functioning.
-* Perl (bundled with OpenKore).
-* **Authen::OATH** Perl module. Install via CPAN if not already present:
-
-  ```bash
-  cpan Authen::OATH
-  ```
+✅ Compatible with servers that require OTP during login.
+✅ Lightweight and written purely in Perl, no external dependencies beyond OpenKore.
 
 ---
 
-### ⚙️ Installation
+## ⚙ Requirements
 
-1. **Download** `totp.pl` and place it in the `plugins/` folder of your OpenKore directory.
-2. Open the `config.txt` file located in the main OpenKore folder.
-3. Add the following line, replacing `YOUR_BASE32_SECRET` with your Base32-encoded TOTP secret key:
-
-   ```ini
-   totpSecret YOUR_BASE32_SECRET
-   ```
-4. **Save** `config.txt`.
-5. **Restart** OpenKore so the plugin is loaded at startup.
+* OpenKore (recent version with plugin system support)
+* A **Base32-encoded OTP seed** (provided by your game account)
+* Perl modules:
+  * `Digest::SHA`
 
 ---
 
-### 🚀 Usage
+## 🚀 Installation
 
-1. Launch OpenKore normally. When the server requests a TOTP code, this plugin will detect the request automatically.
-2. The plugin uses **Authen::OATH** to generate the current TOTP code from your secret and sends it to the server.
-3. If the code is correct, OpenKore will continue to the world selection screen.
+1️⃣ **Place the plugin**
 
-> **Note:** This plugin listens for packet `0x0AE3` (roughly 28 bytes) to trigger the TOTP prompt.
+Download `tOTP.pl` and put it in your OpenKore `plugins/` directory:
+
+```
+/openkore/plugins/tOTP/tOTP.pl
+```
+
+2️⃣ **Configure your OTP seed**
+
+In your `config.txt` add your seed:
+
+```
+otpSeed T0TPS33DROL4S3RV
+```
+
+3️⃣ **Modify OpenKore source (important!)**
+
+⚠ **OpenKore does not trigger a hook for OTP requests by default.**
+You must modify `src/Network/Receive.pm`:
+
+Find the method:
+
+```perl
+sub received_login_token {
+```
+
+And replace this part:
+
+```perl
+sub received_login_token {
+	my ($self, $args) = @_;
+	# XKore mode 1 / 3.
+	return if ($self->{net}->version == 1);
+	my $master = $masterServers{$config{master}};
+
+	# rathena use 0064 not 0825
+	$messageSender->sendTokenToServer($config{username}, $config{password}, $master->{master_version}, $master->{version}, $args->{login_token}, $args->{len}, $master->{OTP_ip}, $master->{OTP_port});
+}
+```
+
+👉 With:
+
+```perl
+sub received_login_token {
+	my ($self, $args) = @_;
+	# XKore mode 1 / 3.
+	return if ($self->{net}->version == 1);
+	my $master = $masterServers{$config{master}};
+
+	if (length($args->{login_token}) == 0) {
+		Plugins::callHook('totp/request_otp', $messageSender);
+		return;
+	}
+
+	# rathena use 0064 not 0825
+	$messageSender->sendTokenToServer($config{username}, $config{password}, $master->{master_version}, $master->{version}, $args->{login_token}, $args->{len}, $master->{OTP_ip}, $master->{OTP_port});
+}
+```
+
+This change allows your plugin to handle and send the TOTP code.
 
 ---
 
-### 🔧 Configuration
+## ⚠ Why is Receive.pm modification required?
 
-* **totpSecret**: Your Base32-encoded TOTP secret key (e.g., `JBSWY3DPEHPK3PXP`).
-
-Other OpenKore settings remain in `config.txt` as usual.
-
----
-
-### 🐞 Troubleshooting
-
-* **No code sent**:
-
-  * Verify `totpSecret` is correctly set in `config.txt`.
-  * Ensure there are no extra spaces or hidden characters.
-
-* **Error messages**:
-
-  * `Error: 'totpSecret' not found in config.txt` → Check that `totpSecret` is spelled correctly.
-  * `Authen::OATH module not found` → Install it via CPAN: `cpan Authen::OATH`.
-
-Logs will show messages from `[totp]` prefix for easier diagnosis.
+OpenKore core does **not** provide a native event or plugin hook when the server requests an OTP (via packet `0AE3`).
+Without modifying `Receive.pm`, the plugin has no way to know when the server is expecting the OTP code.
 
 ---
 
-### 📖 How It Works
+## 📝 Example `config.txt`
 
-1. **Intercept**: Hooks into packet `0x0AE3` to detect when the server asks for the OTP.
-2. **Generate**: Uses `Authen::OATH->totp($secret)` to compute the 6-digit TOTP code.
-3. **Send**: Packages the code in packet `0x0C23` and sends it to the server.
+```
+master Latam - ROla: Freya/Nidhogg/Yggdrasil
+server 0
+username exemple@mail.com
+password Str0ngP4ssW0rd
+loginPinCode 0123
+char 0
+otpSeed T0TPS33DROL4S3RV
+```
 
 ---
 
-### 📬 Feedback & Contributions
+## 🔑 How it works
 
-If you discover any bugs or have suggestions, please open an issue in the repository or contact the author directly.
+* Server sends a `0AE3` packet requesting an OTP code.
+* Modified `Receive.pm` triggers: `Plugins::callHook('totp/request_otp', $messageSender);`
+* The plugin generates a valid TOTP code and sends it to the server.
+* Login continues automatically.
+
+---
+
+## 📜 License
+
+This plugin is licensed under the MIT License.
+See [https://mit-license.org/](https://mit-license.org/) for details.
+
+---
+
+## 🤝 Contributing
+
+Fork, enhance, and share improvements — especially ideas on how to eliminate the need for core source modifications!
+
+---
+
+## 💬 Support
+
+* [OpenKore forums](https://forums.openkore.com/)
+* [OpenKore GitHub](https://github.com/OpenKore/openkore)
