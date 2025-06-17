@@ -3,14 +3,14 @@ package OTP::Core;
 use strict;
 
 use Digest::SHA qw(hmac_sha1);
-use OTP::Utils qw(decode_base32);
+use OTP::Utils;
 
-sub generate_totp {
+sub generate_otp {
     my ($secret, $time_step, $digits) = @_;
     $time_step ||= 30;
     $digits ||= 6;
 
-    my $decoded_key = decode_base32($secret);
+    my $decoded_key = OTP::Utils::decode_base32($secret);
     my $tstamp = int(time() / $time_step);
     my $tbytes = pack('J>', $tstamp);
 

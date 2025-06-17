@@ -12,7 +12,10 @@
 package OTP;
 
 use strict;
-use OTP::Core qw(generate_otp);
+
+use Plugins;
+use lib $Plugins::current_plugin_folder;
+use OTP::Core;
 
 # Load necessary OpenKore modules
 use Globals;
@@ -42,7 +45,7 @@ sub on_request_otp {
         return;
     }
 
-    my $totp = generate_otp($config{otpSeed});
+    my $totp = OTP::Core::generate_otp($config{otpSeed});
     message "[OTP] Generated TOTP: $totp\n";
 
     my $packet = pack('v a6 C', 0x0C23, $totp, 0x00);
