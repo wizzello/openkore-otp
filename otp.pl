@@ -14,14 +14,11 @@ package OTP;
 use strict;
 
 use Plugins;
+use Globals;
+use Log qw(message error);
 use lib $Plugins::current_plugin_folder;
 use OTP::Core;
 
-# Load necessary OpenKore modules
-use Globals;
-use Log qw(message error);
-
-# Register the plugin and provide unload handler
 Plugins::register(
     'otp',
     'Handles OTP requests by generating and sending TOTP',
@@ -29,13 +26,11 @@ Plugins::register(
 );
 
 # Add hook to listen for the custom OTP request event
-# This event must be triggered by a modified OpenKore source (see README.md)
+# This event must be triggered by OpenKore PR #4036
 my $hooks = Plugins::addHooks(
     ['pre_sendTokenToServer', \&hook_login_received]
 );
 
-# This function is called when OpenKore requests an OTP code.
-# It generates the TOTP code and sends it to the server.
 sub hook_login_received  {
     my (undef, $hookArgs) = @_;
     my $args = $hookArgs->{args};
@@ -60,7 +55,6 @@ sub hook_login_received  {
 }
 
 sub unload {
-    # Unregister hooks when unloading the plugin
     Plugins::delHooks($hooks);
     message "[OTP] Plugin unloaded.\n";
 }
