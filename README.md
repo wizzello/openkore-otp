@@ -1,89 +1,105 @@
-# OTP Plugin for OpenKore
+# OTP Generator Plugin for OpenKore
 
-## ✪ Overview
+## 🎯 Overview
 
-OTP is a plugin for **OpenKore** that automatically handles Time-based One-Time Password (TOTP) authentication during login.
-It listens for OTP requests and generates the correct TOTP code using the seed provided in your `config.txt`.
+This plugin **generates Time-based One-Time Passwords (TOTP)** on demand, without modifying OpenKore core.
 
-✅ Compatible with servers that require OTP during login.
-✅ Lightweight and written purely in Perl, no external dependencies beyond OpenKore.
+* **Plugin Name:** OTP
+* **Repository:** [https://github.com/wizzello/openkore-otp](https://github.com/wizzello/openkore-otp)
+* **License:** [MIT](https://github.com/wizzello/openkore-otp/LICENSE)
 
 ---
 
-## ⚙ Requirements
+## 🔗 Dependencies
 
-* OpenKore (recent version with plugin system support)
-* A **Base32-encoded OTP seed** (provided by your game account)
+* **OpenKore** (version with plugin hook `request_otp_login` from PR #4036)
+* **No external Perl modules** required; pure Perl implementation.
 
 ---
 
 ## 🚀 Installation
 
-1️⃣ **Place the plugin**
+1. **Clone the repository** into your OpenKore plugins folder:
 
-Download `otp.pl` and put it in your OpenKore `plugins/` directory:
+   ```bash
+   cd openkore/plugins
+   git clone https://github.com/wizzello/openkore-otp OTP
+   ```
 
-```
-/openkore/plugins/OTP/otp.pl
-```
-
-Download `Core.pm` and `Utils.pm`, put them in your OpenKore `plugins/OTP/` directory:
-
-```
-/openkore/plugins/OTP/OTP/Core.pm
-/openkore/plugins/OTP/OTP/Utils.pm
-```
-
-2️⃣ **Configure your OTP seed**
-
-In your `config.txt` add your seed:
-
-```
-otpSeed T0TPS33DROL4S3RV
-```
-
-3️⃣ **Ensure OpenKore core has the required hook**
-
-⚠ This plugin depends on OpenKore having the `pre_sendTokenToServer` hook implemented.
-➡ This is currently under review in the PR: [OpenKore PR #4036](https://github.com/OpenKore/openkore/pull/4036)
-
-Please ensure this PR is merged into your OpenKore before using the plugin.
+2. **Ensure your OpenKore is updated** to include PR #4036, which triggers the hook `request_otp_login` in `received_login_token`.
 
 ---
 
-## 📝 Example `config.txt`
+## 🔧 Configuration
 
-```
-master Latam - ROla: Freya/Nidhogg/Yggdrasil
-server 0
-username exemple@mail.com
-password Str0ngP4ssW0rd
-loginPinCode 0123
+Add your Base32-encoded OTP seed to `config.txt`:
+
+```ini
 otpSeed T0TPS33DROL4S3RV
 ```
 
 ---
 
-## 🔑 How it works
+## 🔑 Usage Flow
 
 * Server sends a `0AE3` packet requesting an OTP code.
-* OpenKore calls the `pre_sendTokenToServer` hook.
-* The plugin generates a valid TOTP code and sends it to the server.
-* The plugin prevents `$messageSender->sendTokenToServer` from being called while the server is waiting for the OTP code.
-* Login continues automatically.
+* OpenKore calls the hook `request_otp_login` instead of sending its default token logic.
+* This plugin generates a valid TOTP code and returns it via the hook reference.
+* Core then sends your OTP to the server with `sendOtpToServer`.
 
 ---
 
-## 📜 License
+## ⚙️ Examples
 
-This plugin is licensed under the MIT License.
-See [https://mit-license.org/](https://mit-license.org/) for details.
+### Hook Implementation in OpenKore (after PR #4036)
+
+```perl
+sub received_login_token {
+    my ($self, $args) = @_;
+
+    return if $self->{net}->version == 1;
+    my $master = $masterServers{$config{master}};
+    my $login_type = $args->{login_type};
+
+    if ($login_type == 400 || $login_type == 1000) {
+        die 'ERROR: otpSeed is not set in config.txt' unless $config{otpSeed};
+
+        my $otp;
+        Plugins::callHook('request_otp_login', { otp => \$otp, seed => $config{otpSeed} });
+        debug "Generated OTP: $otp\n", 'parseMsg', 2;
+        $messageSender->sendOtpToServer($otp);
+    }
+    # ... other cases ...
+}
+```
+
+### Plugin Code Snippet
+
+```perl
+# Add hook listener
+my $hooks = Plugins::addHooks([
+    'request_otp_login', \&generate
+]);
+
+sub generate {
+    my ($plugin, $args) = @_;
+    my $otp_ref = $args->{otp};
+    my $seed    = $args->{seed};
+    $$otp_ref   = _generate_otp($seed);
+}
+```
+
+---
+
+## 🔄 Branch Dependency
+
+This branch **depends on** the acceptance of [OpenKore PR #4036](https://github.com/OpenKore/openkore/pull/4036), which introduces the `request_otp_login` hook.
 
 ---
 
 ## 🤝 Contributing
 
-Fork, enhance, and share improvements — especially ideas on how to eliminate the need for core source modifications!
+Feel free to open issues or submit pull requests to improve this plugin or reduce core modifications further.
 
 ---
 
@@ -92,7 +108,6 @@ Fork, enhance, and share improvements — especially ideas on how to eliminate t
 This plugin was made possible thanks to contributions, ideas, and support from:
 
 * **pogramos** – for the idea of creating a custom Base32 decoder instead of using external libraries.
-* **SilverPhoenix28** – for sharing the way to handle OTP through `received_login_token` and `$messageSender`.
 * **OpenKore Community** – for testing, feedback, and code reviews.
 
 We appreciate every idea, report, and line of code that made this plugin better!
