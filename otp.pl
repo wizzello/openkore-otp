@@ -19,7 +19,6 @@ use OTP::Core;
 
 # Load necessary OpenKore modules
 use Globals;
-use Digest::SHA qw(hmac_sha1);
 use Log qw(message error);
 
 # Register the plugin and provide unload handler
@@ -32,33 +31,28 @@ Plugins::register(
 # Add hook to listen for the custom OTP request event
 # This event must be triggered by a modified OpenKore source (see README.md)
 my $hooks = Plugins::addHooks(
-    ['login_token_requested', \&on_request_otp]
+    ['packet_pre/received_login_token', \&hook_login_received]
 );
 
 # This function is called when OpenKore requests an OTP code.
 # It generates the TOTP code and sends it to the server.
-sub on_request_otp {
-    my (undef, $data) = @_;
-    my $sender = $data->{sender};
-    my $args = $data->{args};
+sub hook_login_received  {
+    my (undef, $args) = @_;
 
-    if($args->{flag} == '9101') {
-		error ("[OTP] ERROR: Fail to recognizing OTP (500)\n");
-		return;
-	}
+    return 0 if (length($args->{login_token}) != 0);
 
-    if (!$config{otpSeed}) {
+    if (!$config{otpSeed}) { 
         error "[OTP] ERROR: otpSeed is not set in config.txt\n";
-        return;
+        return; 
     }
 
-    my $totp = OTP::Core::generate_otp($config{otpSeed});
-    message "[OTP] Generated TOTP: $totp\n";
+    my $otp = OTP::Core::generate_otp($config{otpSeed});
+    message "[OTP] Generated OTP: $otp\n";
 
-    my $packet = pack('v a6 C', 0x0C23, $totp, 0x00);
-
-    $sender->sendToServer($packet);
-    message "[OTP] TOTP sent successfully\n";
+    my $packet = pack('v a6 C', 0x0C23, $otp, 0x00);
+    $messageSender->sendToServer($packet);
+    message "[OTP] OTP sent successfully\n";
+    return; 
 }
 
 sub unload {
