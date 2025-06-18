@@ -6,7 +6,7 @@ This plugin **generates Time-based One-Time Passwords (TOTP)** on demand, withou
 
 * **Plugin Name:** OTP
 * **Repository:** [https://github.com/wizzello/openkore-otp](https://github.com/wizzello/openkore-otp)
-* **License:** [MIT](https://github.com/wizzello/openkore-otp/LICENSE)
+* **License:** [MIT](LICENSE)
 
 ---
 
