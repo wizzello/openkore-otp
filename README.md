@@ -14,9 +14,6 @@ It listens for OTP requests and generates the correct TOTP code using the seed p
 
 * OpenKore (recent version with plugin system support)
 * A **Base32-encoded OTP seed** (provided by your game account)
-* Perl modules:
-  * `MIME::Base32`
-  * `Digest::SHA`
 
 ---
 
@@ -30,10 +27,11 @@ Download `otp.pl` and put it in your OpenKore `plugins/` directory:
 /openkore/plugins/OTP/otp.pl
 ```
 
-Download `Core.pm` and put them in your OpenKore `plugins/OTP/` directory:
+Download `Core.pm` and `Utils.pm`, put them in your OpenKore `plugins/OTP/` directory:
 
 ```
 /openkore/plugins/OTP/OTP/Core.pm
+/openkore/plugins/OTP/OTP/Utils.pm
 ```
 
 2️⃣ **Configure your OTP seed**
