@@ -107,6 +107,7 @@ Feel free to open issues or submit pull requests to improve this plugin or reduc
 
 This plugin was made possible thanks to contributions, ideas, and support from:
 
+* **alisonrag** – for helping to adapt the project to the openkore guide lines and helping with testing and suggestions for improvements.
 * **pogramos** – for the idea of creating a custom Base32 decoder instead of using external libraries.
 * **OpenKore Community** – for testing, feedback, and code reviews.
 
