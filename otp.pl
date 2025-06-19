@@ -1,6 +1,6 @@
 #############################################################################
 #
-# OTP Generator plugin by wizzello and pogramos
+# OTP Generator plugin by wizzello, alisonrag and pogramos
 #
 # Openkore: http://openkore.com/
 # Repository: https://github.com/wizzello/openkore-otp
